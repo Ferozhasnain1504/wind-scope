@@ -1,155 +1,212 @@
-# WindScope
+# WindScope — Wind Generation Forecast Analysis
 
-**Day-Ahead Wind Generation Forecast Analytics for UK Energy Buyers**
+WindScope is a full-stack dashboard for analysing UK wind generation forecasts against actual generation. It is designed to help a day-ahead electricity buying team review forecast performance, understand forecast errors, and make more informed procurement decisions.
 
-WindScope is a full-stack analytics dashboard designed to help a UK energy utility's day-ahead electricity buying team compare forecast wind generation with actual generation and evaluate forecast accuracy.
+## Live Demo
+
+- **Frontend:** https://wind-scope-phi.vercel.app/
+- **Backend health check:** https://windscope-backend-ajat.onrender.com/api/health
+- **January 2026 accuracy API:** https://windscope-backend-ajat.onrender.com/api/accuracy?start_date=2026-01-01&end_date=2026-01-31
+- **Demo video:** `ADD_YOUR_UNLISTED_YOUTUBE_VIDEO_URL_HERE`
+
+> The backend is hosted on Render and may take a short time to respond if its service has been idle.
 
 ## Features
 
-- UK national wind generation forecast and actual data sourced from the Elexon BMRS API.
-- Interactive chart comparing hourly forecast and actual generation.
-- Accuracy metrics: Mean Absolute Error (MAE), Root Mean Square Error (RMSE), and forecast bias.
-- January 2026 analysis window.
-- FastAPI backend and React frontend.
-- Docker support planned / in progress.
+- Daily overview of actual and forecast wind generation.
+- Forecast-versus-actual visualisation.
+- Forecast accuracy analysis for January 2026.
+- Key metrics: Mean Absolute Error (MAE), Root Mean Squared Error (RMSE), and bias.
+- Python API for retrieving processed data.
+- Docker Compose setup for local development and testing.
 
 ## Technology Stack
 
-- **Frontend:** React, Vite, Tailwind CSS, shadcn/ui, Recharts
-- **Backend:** Python, FastAPI, Pandas, HTTPX
-- **Data source:** Elexon BMRS API
-- **Deployment:** To be added after deployment
+**Frontend**
+- React
+- Vite
+- Tailwind CSS
+- shadcn/ui components
+- Recharts
+- Lucide icons
+
+**Backend**
+- Python
+- FastAPI
+- pandas
+- HTTPX
+
+**Deployment and tooling**
+- Vercel (frontend)
+- Render (backend)
+- Docker and Docker Compose
+- Elexon BMRS API
 
 ## Data Sources
 
-WindScope uses Elexon's API for:
+WindScope uses Elexon's BMRS API:
 
-- **Actual generation:** `FUELHH`, filtered to the `WIND` fuel type.
-- **Forecast generation:** `WINDFOR` historical wind forecast records.
+- **FUELHH** — actual generation data, filtered to wind generation: https://bmrs.elexon.co.uk/api-documentation/endpoint/datasets/FUELHH/stream
+- **WINDFOR** — wind generation forecast data: https://bmrs.elexon.co.uk/api-documentation/endpoint/datasets/WINDFOR/stream
 
-Official API documentation:
-- [FUELHH dataset](https://bmrs.elexon.co.uk/api-documentation/endpoint/datasets/FUELHH/stream)
-- [WINDFOR dataset](https://bmrs.elexon.co.uk/api-documentation/endpoint/datasets/WINDFOR/stream)
+The analysis in this assignment is scoped to **January 2026**.
 
-## Forecast Evaluation Methodology
+## Metrics and Methodology
 
-The current prototype uses a **10:00 UTC cutoff on the day before delivery** as an assumed day-ahead decision time.
+- **MAE (Mean Absolute Error):** average absolute difference between forecast and actual generation.
+- **RMSE (Root Mean Squared Error):** square root of the average squared forecast error; larger errors have a greater effect on this metric.
+- **Bias:** average signed error. In this implementation, error is calculated as forecast minus actual, so positive bias indicates over-forecasting on average and negative bias indicates under-forecasting.
 
-1. Retrieve historical wind forecast publications available by the assumed cutoff.
-2. Select the latest eligible forecast for each delivery timestamp.
-3. Retrieve actual wind generation.
-4. Aggregate half-hourly actual readings into hourly averages.
-5. Match forecasts and actuals by UTC delivery timestamp.
-6. Calculate forecast errors as:
+Actual FUELHH readings are half-hourly and are aggregated to hourly averages before matching them with hourly forecast values. Metrics are calculated over matched delivery intervals.
 
-   `Error = Forecast - Actual`
+The current implementation uses a **previous-day 10:00 UTC forecast cutoff** for the day-ahead analysis. This is an implementation assumption and should be validated against the target team's operational procurement rules before production use.
 
-Metrics:
+The values shown by the deployed application are produced by the current implementation and source data. They should be interpreted in the context of the matching rules and assumptions above.
 
-- **MAE:** Mean absolute error, in MW.
-- **RMSE:** Root mean square error, in MW.
-- **Bias:** Mean forecast error, in MW. Positive bias means forecasts exceed actual generation on average.
+## API Endpoints
 
-The cutoff time is an assumption and should be confirmed against the customer's intended purchasing decision time before operational use. The current implementation is a prototype, not a trading recommendation.
+The backend provides the following endpoints:
 
-## January 2026 Results
+| Endpoint | Purpose |
+|---|---|
+| `/` | Basic backend response |
+| `/api/health` | Health check |
+| `/api/overview?date=2026-01-01` | Daily overview |
+| `/api/accuracy?start_date=2026-01-01&end_date=2026-01-31` | Accuracy metrics for a date range |
+| `/api/forecasts?date=2026-01-01` | Forecast data for a selected date |
 
-The current API returns the following metrics for 1–31 January 2026:
+The date examples above are within the January 2026 assignment period.
 
-| Metric | Value |
-|---|---:|
-| MAE | 2,122.81 MW |
-| RMSE | 2,616.69 MW |
-| Bias | +1,840.30 MW |
-| Matched hourly intervals | 744 |
-| Missing forecasts | 0 |
-
-These values are results from the current implementation and its stated cutoff assumption. They should be revalidated if the data-selection methodology or cutoff changes.
-
-## Project Structure
+## Repository Structure
 
 ```text
-windscope/
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   ├── data/
-│   │   ├── services/
-│   │   ├── App.jsx
-│   │   └── index.css
-│   ├── package.json
-│   └── vite.config.js
+wind-scope/
 ├── backend/
 │   ├── app/
 │   │   ├── main.py
 │   │   └── data_service.py
 │   ├── requirements.txt
-│   └── check_forecast.py
+│   └── Dockerfile
+├── frontend/
+│   ├── src/
+│   │   └── services/
+│   │       └── api.js
+│   ├── nginx.conf
+│   ├── Dockerfile
+│   └── package.json
+├── docker-compose.yml
+├── .gitignore
 └── README.md
 ```
 
-Additional diagnostic scripts may be present in the backend folder.
+> This is a high-level overview of the main files. Other frontend source files and configuration files may also be present in the repository.
 
 ## Run Locally
 
-### Requirements
+### Prerequisites
 
-- Node.js and npm
-- Python 3.11 or a compatible supported version
-- Internet access to retrieve Elexon API data
+- Git
+- Docker Desktop with Docker Compose
 
-### 1. Start the backend
+### Option 1: Run with Docker Compose
 
-Open a terminal in the project root:
+1. Clone the repository:
 
-```bat
+   ```bash
+   git clone YOUR_PUBLIC_GITHUB_REPOSITORY_URL
+   cd YOUR_REPOSITORY_DIRECTORY
+   ```
+
+2. Build and start the services from the project root:
+
+   ```bash
+   docker compose up --build
+   ```
+
+3. Open the application:
+
+   - Frontend: http://localhost:8080
+   - Backend health check: http://localhost:8000/api/health
+
+4. Stop the services with `Ctrl+C`. If you started them in detached mode, use:
+
+   ```bash
+   docker compose down
+   ```
+
+### Option 2: Run the services separately
+
+**Backend**
+
+From the repository root, create and activate a Python virtual environment, then install dependencies:
+
+Windows Command Prompt:
+
+```cmd
 cd backend
-python -m venv .venv
-.venv\Scripts\activate.bat
+py -m venv .venv
+.venv\Scripts\activate
 pip install -r requirements.txt
-python -m uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Backend API: `http://localhost:8000`
-
-Interactive API documentation: `http://localhost:8000/docs`
-
-### 2. Start the frontend
+**Frontend**
 
 Open a second terminal:
 
-```bat
+```cmd
 cd frontend
 npm install
 npm run dev
 ```
 
-Open the local frontend URL printed by Vite, normally `http://localhost:5173`.
+The Vite development server typically runs at http://localhost:5173. The Vite configuration proxies `/api` requests to the local backend.
 
-### API Endpoints
+## Deployment Configuration
 
-| Endpoint | Purpose |
-|---|---|
-| `GET /api/health` | Backend health check |
-| `GET /api/overview?date=2026-01-01` | Daily generation data and metrics |
-| `GET /api/accuracy?start_date=2026-01-01&end_date=2026-01-31` | Accuracy metrics for a date range |
-| `GET /api/forecasts?date=2026-01-01` | Forecast and actual records for a delivery day |
+### Frontend — Vercel
 
-The prototype currently restricts analysis to January 2026.
+Set this environment variable in the Vercel project settings for the relevant deployment environment:
 
-## Deployment
+```text
+VITE_API_BASE_URL=https://windscope-backend-ajat.onrender.com
+```
 
-Deployment URL: **To be added after successful deployment.**
+Redeploy the frontend after changing the variable. Vite environment variables are embedded into the frontend at build time.
 
-## AI Use Disclosure
+### Backend — Render
 
-AI assistance was used during development for code drafting, debugging, API integration guidance, data validation steps, and documentation preparation. The project was tested locally, and the data-selection and evaluation assumptions are documented above.
+The backend is deployed at:
 
-## Limitations and Future Improvements
+```text
+https://windscope-backend-ajat.onrender.com
+```
 
-- Confirm the day-ahead purchasing decision cutoff with the intended customer.
-- Validate the forecast product and delivery-period semantics against Elexon's documentation.
-- Add automated tests for API parsing, timestamp alignment, and accuracy calculations.
-- Improve error handling and caching for API requests.
-- Complete and test Docker configuration.
-- Deploy the frontend and backend and document the live URLs.
+Ensure the FastAPI CORS configuration allows the deployed frontend origin:
+
+```text
+https://wind-scope-phi.vercel.app
+```
+
+Retain the local development origins if you still use the local Vite server.
+
+## Limitations and Assumptions
+
+- The analysis is limited to January 2026 for this assignment.
+- Actual readings are aggregated from half-hourly to hourly averages; this may affect comparisons depending on the source data and chosen aggregation method.
+- The previous-day 10:00 UTC forecast cutoff is an implementation assumption, not a confirmed operational requirement.
+- Metrics depend on the source records available and the rules used to select and match forecasts with actuals.
+- This is an analysis and decision-support dashboard. It does not place trades or automatically execute electricity purchases.
+- Before operational use, the forecast selection cutoff, data quality handling, and procurement team's requirements should be validated.
+
+## AI-Use Disclosure
+
+AI assistance was used during development to support implementation, debugging, documentation, and preparation of the project demonstration. The code and resulting application should be reviewed and tested by the project author. Any AI-generated or AI-assisted material has been used as a development aid, and the author remains responsible for the final implementation and its claims.
+
+## Demo Video
+
+Add the URL of the unlisted YouTube demonstration here after uploading:
+
+`ADD_YOUR_UNLISTED_YOUTUBE_VIDEO_URL_HERE`
+
+The video should demonstrate the customer problem and dashboard first, followed by the technical architecture, data sources, processing methodology, deployment, and limitations.
